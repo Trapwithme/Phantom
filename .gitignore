@@ -1,0 +1,22 @@
+## Build artifacts
+bin/
+obj/
+
+## VS files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## NuGet
+packages/
+*.nupkg
+
+## Temp test output
+test_output.bat
+Images/test_output.bat
+global.json
+
+## Release zip
+release.zip

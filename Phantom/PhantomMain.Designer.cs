@@ -39,7 +39,6 @@
             this.antiVM = new System.Windows.Forms.CheckBox();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.optionsPage = new System.Windows.Forms.TabPage();
-            this.uacBypass = new System.Windows.Forms.CheckBox();
             this.startup = new System.Windows.Forms.CheckBox();
             this.runas = new System.Windows.Forms.CheckBox();
             this.binderPage = new System.Windows.Forms.TabPage();
@@ -150,7 +149,6 @@
             // 
             // optionsPage
             // 
-            this.optionsPage.Controls.Add(this.uacBypass);
             this.optionsPage.Controls.Add(this.startup);
             this.optionsPage.Controls.Add(this.runas);
             this.optionsPage.Controls.Add(this.hidden);
@@ -165,17 +163,6 @@
             this.optionsPage.Text = "Options";
             this.optionsPage.UseVisualStyleBackColor = true;
             // 
-            // uacBypass
-            // 
-            this.uacBypass.AutoSize = true;
-            this.uacBypass.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.uacBypass.Location = new System.Drawing.Point(6, 249);
-            this.uacBypass.Name = "uacBypass";
-            this.uacBypass.Size = new System.Drawing.Size(178, 33);
-            this.uacBypass.TabIndex = 13;
-            this.uacBypass.Text = "UAC Bypass";
-            this.uacBypass.UseVisualStyleBackColor = true;
-            this.uacBypass.CheckedChanged += new System.EventHandler(this.uacBypass_CheckedChanged);
             // 
             // startup
             // 
@@ -197,7 +184,7 @@
             this.runas.Name = "runas";
             this.runas.Size = new System.Drawing.Size(191, 33);
             this.runas.TabIndex = 11;
-            this.runas.Text = "Run as admin";
+            this.runas.Text = "Ask admin prompt";
             this.runas.UseVisualStyleBackColor = true;
             // 
             // binderPage
@@ -311,6 +298,5 @@
         private System.Windows.Forms.ListBox listBox2;
         private System.Windows.Forms.CheckBox runas;
         private System.Windows.Forms.CheckBox startup;
-        private System.Windows.Forms.CheckBox uacBypass;
     }
 }

