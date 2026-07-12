@@ -28,12 +28,6 @@ namespace Phantom
                 output.AppendLine($"echo Set s = CreateObject(\"WScript.Shell\") > {vbsFile}");
                 output.AppendLine($"echo s.Run \"cmd /c \"\"%~f0\"\" {magicFlag} %*\", 0, False >> {vbsFile}");
                 output.AppendLine($"wscript {vbsFile}");
-                // Self-delete original batch (not startup copy in AppData)
-                if (selfdelete)
-                {
-                    output.AppendLine("set \"_p=%~dp0\"");
-                    output.AppendLine("if /i \"%_p:AppData=%\"==\"%_p%\" ((goto) 2>nul & del \"%~f0\")");
-                }
                 output.AppendLine("exit /b");
                 output.AppendLine(":main");
             }
