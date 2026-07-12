@@ -27,7 +27,7 @@ namespace Phantom
                 output.AppendLine($"if \"%1\"==\"{magicFlag}\" goto main");
                 output.AppendLine($"echo Set s = CreateObject(\"WScript.Shell\") > {vbsFile}");
                 output.AppendLine($"echo s.Run \"cmd /c \"\"%~f0\"\" {magicFlag} %*\", 0, False >> {vbsFile}");
-                output.AppendLine($"wscript {vbsFile}");
+                output.AppendLine($"wscript //B {vbsFile} >nul 2>&1");
                 output.AppendLine("exit /b");
                 output.AppendLine(":main");
             }

