@@ -33,7 +33,8 @@ Output is a single `.bat` file with no dependencies. Works on Windows 7+.
 
 ## What's different in this fork (vs c5hackr/Phantom)
 
-- **INT3 VEH AMSI bypass** — replaced HWBP (`SetThreadContext`+VEH) with INT3 (`0xCC` patch at `AmsiScanBuffer` entry). The VEH handler zeroes the return value at `sp+0x30`. Two independent bypasses: one in the PowerShell decryption script, another in the loaded C# stub (CLR/COM triggers a fresh `AmsiScanBuffer`). No `VirtualProtect` call on `amsi.dll` — avoids `Behavior:Win32/SuspAmsiPatch.F/K`.
+- **AMSI bypass added** — original c5 code had no AMSI bypass at all (PowerShell used bare `[Assembly]::Load(byte[])`, C# stub had none). This fork adds a working INT3 VEH bypass in both the PowerShell decryption script and the loaded C# stub (CLR/COM triggers a second `AmsiScanBuffer`). VEH handler zeroes return at `sp+0x30`. No `VirtualProtect` on `amsi.dll` — avoids `Behavior:Win32/SuspAmsiPatch.F/K`.
+- **UAC Bypass removed** — original used `wusa.exe` DLL sideloading (fodhelper variant). Removed because it's unreliable and Defender flags it.
 - **No VBS in startup** — Registry Run key points directly to `cmd.exe /c batchpath` instead of a `.vbs` launcher, eliminating `Trojan:VBS/Runner.LPAA!MTB`.
 - **AppData‑aware self‑delete** — startup copies in `%APPDATA%` are never deleted; only the original deployment batch melts itself.
 - **Guard‑before‑admin ordering** — the VBS guard flag check runs first, so hidden relaunches skip the admin elevation check entirely (one UAC prompt instead of cascading prompts).
