@@ -22,8 +22,8 @@ namespace Phantom
         {
             SetProcessDPIAware();
 
-            // CLI mode: Phantom.exe --cli <input.exe> [output.bat] [options]
-            // Options: --hidden, --selfdelete, --runas, --startup, --antidebug, --antivm
+            // CLI: Phantom.exe --cli <input_exe> [output_bat] [options]
+            // Options: --hidden --selfdelete --runas --startup --antidebug --antivm
             if (args.Length >= 2 && args[0] == "--cli")
             {
                 AllocConsole();

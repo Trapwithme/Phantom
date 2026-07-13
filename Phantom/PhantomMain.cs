@@ -59,7 +59,8 @@ New features in this fork:
 Build: MSBuild Phantom.csproj /p:Configuration=Release
 Output: bin\Release\Phantom.exe
 
-CLI: Phantom.exe --cli <input_exe> <output_bat>
+CLI: Phantom.exe --cli <input_exe> [output_bat] [options]
+     Options: --hidden --selfdelete --runas --startup --antidebug --antivm
 
 https://github.com/Trapwithme/Phantom";
         }
