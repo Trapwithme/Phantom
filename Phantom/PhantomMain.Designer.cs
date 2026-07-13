@@ -140,6 +140,7 @@
             this.tabControl1.Controls.Add(this.optionsPage);
             this.tabControl1.Controls.Add(this.binderPage);
             this.tabControl1.Controls.Add(this.outputPage);
+            this.tabControl1.Controls.Add(this.aboutPage);
             this.tabControl1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tabControl1.Location = new System.Drawing.Point(19, 104);
             this.tabControl1.Name = "tabControl1";
@@ -240,6 +241,31 @@
             this.outputPage.Text = "Output";
             this.outputPage.UseVisualStyleBackColor = true;
             // 
+            // aboutPage
+            // 
+            this.aboutPage.Controls.Add(this.aboutTextBox);
+            this.aboutPage.Location = new System.Drawing.Point(8, 40);
+            this.aboutPage.Name = "aboutPage";
+            this.aboutPage.Padding = new System.Windows.Forms.Padding(3);
+            this.aboutPage.Size = new System.Drawing.Size(861, 416);
+            this.aboutPage.TabIndex = 4;
+            this.aboutPage.Text = "About";
+            this.aboutPage.UseVisualStyleBackColor = true;
+            // 
+            // aboutTextBox
+            // 
+            this.aboutTextBox.BackColor = System.Drawing.Color.White;
+            this.aboutTextBox.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.aboutTextBox.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.aboutTextBox.Location = new System.Drawing.Point(6, 6);
+            this.aboutTextBox.Multiline = true;
+            this.aboutTextBox.Name = "aboutTextBox";
+            this.aboutTextBox.ReadOnly = true;
+            this.aboutTextBox.Size = new System.Drawing.Size(849, 404);
+            this.aboutTextBox.TabIndex = 0;
+            this.aboutTextBox.Text = "";
+            this.aboutTextBox.WordWrap = false;
+            // 
             // listBox2
             // 
             this.listBox2.FormattingEnabled = true;
@@ -298,5 +324,7 @@
         private System.Windows.Forms.ListBox listBox2;
         private System.Windows.Forms.CheckBox runas;
         private System.Windows.Forms.CheckBox startup;
+        private System.Windows.Forms.TabPage aboutPage;
+        private System.Windows.Forms.TextBox aboutTextBox;
     }
 }
