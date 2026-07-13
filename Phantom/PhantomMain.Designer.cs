@@ -47,10 +47,14 @@
             this.listBox1 = new System.Windows.Forms.ListBox();
             this.outputPage = new System.Windows.Forms.TabPage();
             this.listBox2 = new System.Windows.Forms.ListBox();
+            this.aboutPage = new System.Windows.Forms.TabPage();
+            this.aboutTextBox = new System.Windows.Forms.TextBox();
+            this.telegramIcon = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.optionsPage.SuspendLayout();
             this.binderPage.SuspendLayout();
             this.outputPage.SuspendLayout();
+            this.aboutPage.SuspendLayout();
             this.SuspendLayout();
             // 
             // label1
@@ -101,6 +105,21 @@
             this.buildButton.Text = "Build";
             this.buildButton.UseVisualStyleBackColor = true;
             this.buildButton.Click += new System.EventHandler(this.buildButton_Click);
+            // 
+            // telegramIcon
+            // 
+            this.telegramIcon.BackColor = System.Drawing.Color.FromArgb(0, 136, 204);
+            this.telegramIcon.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.telegramIcon.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            this.telegramIcon.FlatAppearance.BorderColor = System.Drawing.Color.FromArgb(0, 120, 190);
+            this.telegramIcon.ForeColor = System.Drawing.Color.White;
+            this.telegramIcon.Location = new System.Drawing.Point(18, 655);
+            this.telegramIcon.Name = "telegramIcon";
+            this.telegramIcon.Size = new System.Drawing.Size(880, 45);
+            this.telegramIcon.TabIndex = 13;
+            this.telegramIcon.Text = "Join Telegram";
+            this.telegramIcon.UseVisualStyleBackColor = false;
+            this.telegramIcon.Click += new System.EventHandler(this.telegramIcon_Click);
             // 
             // selfDelete
             // 
@@ -264,7 +283,8 @@
             this.aboutTextBox.Size = new System.Drawing.Size(849, 404);
             this.aboutTextBox.TabIndex = 0;
             this.aboutTextBox.Text = "";
-            this.aboutTextBox.WordWrap = false;
+            this.aboutTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.aboutTextBox.WordWrap = true;
             // 
             // listBox2
             // 
@@ -279,9 +299,10 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(192F, 192F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
-            this.ClientSize = new System.Drawing.Size(914, 669);
+            this.ClientSize = new System.Drawing.Size(914, 720);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.buildButton);
+            this.Controls.Add(this.telegramIcon);
             this.Controls.Add(this.openButton);
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.label1);
@@ -299,6 +320,8 @@
             this.optionsPage.PerformLayout();
             this.binderPage.ResumeLayout(false);
             this.outputPage.ResumeLayout(false);
+            this.aboutPage.ResumeLayout(false);
+            this.aboutPage.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -326,5 +349,6 @@
         private System.Windows.Forms.CheckBox startup;
         private System.Windows.Forms.TabPage aboutPage;
         private System.Windows.Forms.TextBox aboutTextBox;
+        private System.Windows.Forms.Button telegramIcon;
     }
 }
