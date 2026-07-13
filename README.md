@@ -63,10 +63,10 @@ Output: `bin\Release\Phantom.exe`
 ### CLI Usage
 
 ```powershell
-Phantom.exe --cli <input_exe> <output_bat>
+Phantom.exe --cli <input_exe> [output_bat] [options]
 ```
 
-Generates a batch with all features enabled (hidden + selfdelete + runas + startup + anti-debug + anti-vm).
+Options (none enabled by default): `--hidden` `--selfdelete` `--runas` `--startup` `--antidebug` `--antivm`
 
 ## Tested Configuration
 
