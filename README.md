@@ -24,16 +24,16 @@ Output is a single `.bat` file with no dependencies. Works on Windows 7+.
 | **Self-deletion** | **AppData-aware** — startup copies in AppData survive; original batch in any other directory is melted with `(goto) 2>nul & del "%~f0"` |
 | **Anti‑Debug** | NtGlobalFlag, being-debugged PEB flag, IsDebuggerPresent, remote debugger detection |
 | **Anti‑VM** | Checks for common VM artifacts (processes, services, hardware identifiers, disk model, MAC prefix, BIOS) |
-| **ETW bypass** | `VirtualProtect` on `ntdll!EtwEventWrite` — zero byte patch. Does NOT trigger Defender's `SuspAmsiPatch.F/K` |
+| **AMSI bypass** | INT3 (`0xCC`) at `AmsiScanBuffer` entry + VEH handler zeroes return at `sp+0x30`. Two independent bypasses: one in the PowerShell decryption script, another in the loaded C# stub (CLR/COM interop triggers a second `AmsiScanBuffer` call). No `VirtualProtect` or `SetThreadContext` — avoids `Behavior:Win32/SuspAmsiPatch.F/K` |
+| **ETW bypass** | `VirtualProtect` on `ntdll!EtwEventWrite` — zero byte patch |
 | **AES-256-CBC** | Payload encrypted with random key/IV per build |
 | **Compression** | GZip compression of the .NET payload before encryption |
 | **Bind files** | Additional files embedded alongside the payload |
-| **.NET / Native** | Supports .NET assemblies and native x64/x86 executables |
+| **.NET / Native** | Supports .NET assemblies and native x64/x86 executables (Donut shellcode conversion) |
 
 ## What's different in this fork (vs c5hackr/Phantom)
 
-- **UAC Bypass removed** — `Behavior:Win32/SuspAmsiPatch.F/K` triggered by HWBP (`SetThreadContext`+VEH) and `VirtualProtect` on `amsi.dll`. Cleaner to prompt the user.
-- **AMSI bypass removed** — same detection; the PowerShell loader uses `Assembly.LoadFrom(GetTempFileName)` instead of `Assembly.Load(byte[])`, which passes AMSI without any patching.
+- **INT3 VEH AMSI bypass** — replaced HWBP (`SetThreadContext`+VEH) with INT3 (`0xCC` patch at `AmsiScanBuffer` entry). The VEH handler zeroes the return value at `sp+0x30`. Two independent bypasses: one in the PowerShell decryption script, another in the loaded C# stub (CLR/COM triggers a fresh `AmsiScanBuffer`). No `VirtualProtect` call on `amsi.dll` — avoids `Behavior:Win32/SuspAmsiPatch.F/K`.
 - **No VBS in startup** — Registry Run key points directly to `cmd.exe /c batchpath` instead of a `.vbs` launcher, eliminating `Trojan:VBS/Runner.LPAA!MTB`.
 - **AppData‑aware self‑delete** — startup copies in `%APPDATA%` are never deleted; only the original deployment batch melts itself.
 - **Guard‑before‑admin ordering** — the VBS guard flag check runs first, so hidden relaunches skip the admin elevation check entirely (one UAC prompt instead of cascading prompts).
