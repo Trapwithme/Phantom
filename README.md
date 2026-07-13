@@ -54,7 +54,7 @@ Output is a single `.bat` file with no dependencies. Works on Windows 7+.
 ## Build
 
 ```powershell
-# Requires MSBuild from Visual Studio 2022 (I:\VisualStudio\2022\Community\MSBuild\Current\Bin\MSBuild.exe)
+# Requires MSBuild from Visual Studio 2022
 MSBuild Phantom.csproj /p:Configuration=Release /p:Platform=AnyCPU
 ```
 
@@ -76,7 +76,7 @@ All flags enabled, zero Windows Defender detections:
 - Stub compiled for .NET Framework 4.7.2 (Roslyn)
 - Payload: AES-256-CBC encrypted + GZip compressed .NET assembly
 - Tested on Windows 11 24H2, real-time protection ON
-- Batch deployed from `C:\Users\...\Pictures\` (no Defender exclusions)
+- Batch deployed from a non-excluded directory (no Defender exclusions)
 
 ## Disclaimer
 
